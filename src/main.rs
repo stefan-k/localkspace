@@ -15,12 +15,12 @@ enum EncodingField {
 
 impl EncodingField {
     pub fn from_name(name: &str) -> Result<Self, Box<dyn Error>> {
-        match name {
-            "X" => Ok(Self::X),
-            "Y" => Ok(Self::Y),
-            "X2pY2" => Ok(Self::X2pY2),
-            "X2mY2" => Ok(Self::X2mY2),
-            "X2Y2" => Ok(Self::X2Y2),
+        match name.to_lowercase().as_str() {
+            "x" => Ok(Self::X),
+            "y" => Ok(Self::Y),
+            "x2py2" => Ok(Self::X2pY2),
+            "x2my2" => Ok(Self::X2mY2),
+            "x2y2" => Ok(Self::X2Y2),
             other => Err(format!("Unknown field name: {}", other).into()),
         }
     }
@@ -36,10 +36,17 @@ impl EncodingField {
 }
 
 fn run() -> Result<(), Box<dyn Error>> {
-    let pos = parse_args()?;
+    // Get position local k space should be evaluated at
+    let pos = parse_position()?;
 
+    // Acquire stdin/stdout
     let stdin = io::stdin();
+    let stdout = io::stdout();
+
+    // Read in k space sampling positions
     let mut header = String::new();
+
+    // Get and parse SEM field shape identifiers and obtain the derivative at `pos`
     stdin.read_line(&mut header)?;
     let d: Vec<_> = header
         .trim()
@@ -47,28 +54,37 @@ fn run() -> Result<(), Box<dyn Error>> {
         .map(|x| EncodingField::from_name(x).unwrap().derivative_at(&pos))
         .collect();
 
-    let stdout = io::stdout();
+    // Lock stdout and write header
     let mut handle = stdout.lock();
     writeln!(handle, "k1,k2")?;
 
+    // Read input line by line, parse, compute local k space and print
     for sample in stdin.lock().lines() {
+        // Parsing
         let s: Vec<f64> = sample?
             .split(',')
             .map(|x| x.parse::<f64>().expect("Corrupted input."))
             .collect();
+        // Computing local kspace
         let k1: f64 = d.iter().zip(s.iter()).map(|(di, si)| di[0] * si).sum();
         let k2: f64 = d.iter().zip(s.iter()).map(|(di, si)| di[1] * si).sum();
+        // Printing
         writeln!(handle, "{},{}", k1, k2)?;
     }
     Ok(())
 }
 
-fn parse_args() -> Result<[f64; 2], Box<dyn Error>> {
+fn parse_position() -> Result<[f64; 2], Box<dyn Error>> {
     let o: Vec<_> = env::args_os()
+        // First one is the name of the binary
         .skip(1)
+        // Only interested in two arguments, ignore the rest
+        .take(2)
         .map(|x| {
+            // Convert to string
             x.into_string()
                 .expect("Argument not a valid string")
+                // Parse as f64
                 .parse::<f64>()
                 .expect("Argument does not seem to be a number")
         })
