@@ -35,6 +35,21 @@ impl EncodingField {
     }
 }
 
+fn localkspace(sample: &[f64], derivatives: &[[f64; 2]]) -> [f64; 2] {
+    [
+        derivatives
+            .iter()
+            .zip(sample.iter())
+            .map(|(di, si)| di[0] * si)
+            .sum(),
+        derivatives
+            .iter()
+            .zip(sample.iter())
+            .map(|(di, si)| di[1] * si)
+            .sum(),
+    ]
+}
+
 fn run() -> Result<(), Box<dyn Error>> {
     // Get position local k space should be evaluated at
     let pos = parse_position()?;
@@ -66,10 +81,9 @@ fn run() -> Result<(), Box<dyn Error>> {
             .map(|x| x.parse::<f64>().expect("Corrupted input."))
             .collect();
         // Computing local kspace
-        let k1: f64 = d.iter().zip(s.iter()).map(|(di, si)| di[0] * si).sum();
-        let k2: f64 = d.iter().zip(s.iter()).map(|(di, si)| di[1] * si).sum();
+        let k = localkspace(&s, &d);
         // Printing
-        writeln!(handle, "{},{}", k1, k2)?;
+        writeln!(handle, "{},{}", k[0], k[1])?;
     }
     Ok(())
 }
