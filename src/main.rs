@@ -58,10 +58,8 @@ fn run() -> Result<(), Box<dyn Error>> {
     let stdin = io::stdin();
     let stdout = io::stdout();
 
-    // Read in k space sampling positions
+    // Get and parse SEM field shape identifiers and obtain the derivatives at `pos`
     let mut header = String::new();
-
-    // Get and parse SEM field shape identifiers and obtain the derivative at `pos`
     stdin.read_line(&mut header)?;
     let d: Vec<_> = header
         .trim()
