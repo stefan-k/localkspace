@@ -1,6 +1,7 @@
 use std::env;
 use std::error::Error;
 use std::io;
+use std::io::prelude::*;
 use std::process;
 
 #[derive(Debug)]
@@ -34,30 +35,31 @@ impl EncodingField {
     }
 }
 
-fn localkspace() -> Result<(), Box<dyn Error>> {
+fn run() -> Result<(), Box<dyn Error>> {
     let pos = parse_args()?;
 
-    let mut rdr = csv::ReaderBuilder::new()
-        .has_headers(true)
-        .from_reader(io::stdin());
-
-    let d: Vec<_> = rdr
-        .headers()?
-        .iter()
-        .map(|h| EncodingField::from_name(h).unwrap().derivative_at(&pos))
+    let stdin = io::stdin();
+    let mut header = String::new();
+    stdin.read_line(&mut header)?;
+    let d: Vec<_> = header
+        .trim()
+        .split(',')
+        .map(|x| EncodingField::from_name(x).unwrap().derivative_at(&pos))
         .collect();
 
-    let mut wtr = csv::Writer::from_writer(io::stdout());
+    let stdout = io::stdout();
+    let mut handle = stdout.lock();
+    writeln!(handle, "k1,k2")?;
 
-    for sample in rdr.deserialize() {
-        let s: Vec<f64> = sample?;
-        let out: Vec<f64> = (0..=1)
-            .map(|i| d.iter().zip(s.iter()).map(|(dd, ss)| dd[i] * ss).sum())
+    for sample in stdin.lock().lines() {
+        let s: Vec<f64> = sample?
+            .split(',')
+            .map(|x| x.parse::<f64>().expect("Corrupted input."))
             .collect();
-
-        wtr.serialize(out)?;
+        let k1: f64 = d.iter().zip(s.iter()).map(|(di, si)| di[0] * si).sum();
+        let k2: f64 = d.iter().zip(s.iter()).map(|(di, si)| di[1] * si).sum();
+        writeln!(handle, "{},{}", k1, k2)?;
     }
-    wtr.flush()?;
     Ok(())
 }
 
@@ -75,7 +77,7 @@ fn parse_args() -> Result<[f64; 2], Box<dyn Error>> {
 }
 
 fn main() {
-    if let Err(err) = localkspace() {
+    if let Err(err) = run() {
         println!("Error computing local k space: {}", err);
         process::exit(1);
     }
