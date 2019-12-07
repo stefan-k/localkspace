@@ -10,7 +10,7 @@ enum EncodingField {
     Y,
     X2pY2,
     X2mY2,
-    X2Y2,
+    XY,
 }
 
 impl EncodingField {
@@ -20,7 +20,7 @@ impl EncodingField {
             "y" => Ok(Self::Y),
             "x2py2" => Ok(Self::X2pY2),
             "x2my2" => Ok(Self::X2mY2),
-            "x2y2" => Ok(Self::X2Y2),
+            "xy" => Ok(Self::XY),
             other => Err(format!("Unknown field name: {}", other).into()),
         }
     }
@@ -30,7 +30,7 @@ impl EncodingField {
             Self::Y => [0.0, 1.0],
             Self::X2pY2 => [pos[0], pos[1]],
             Self::X2mY2 => [2.0 * pos[0], -2.0 * pos[1]],
-            Self::X2Y2 => [2.0 * pos[1], 2.0 * pos[0]],
+            Self::XY => [2.0 * pos[1], 2.0 * pos[0]],
         }
     }
 }
